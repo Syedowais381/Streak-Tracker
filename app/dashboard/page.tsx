@@ -1,61 +1,574 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
+import Toast from '../components/Toast';
+
+interface Streak {
+  id: string;
+  habit: string;
+  current_streak: number;
+  longest_streak: number;
+  last_check_in: string | null;
+  user_id: string;
+}
+
 export default function Dashboard() {
-  const currentStreak = 7; // Dummy data
-  const longestStreak = 14;
-  const totalActive = 21;
+  const [loading, setLoading] = useState(true);
+  const [streaks, setStreaks] = useState<Streak[]>([]);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [totalActive, setTotalActive] = useState(0);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newHabit, setNewHabit] = useState('');
+  const [isHabitsModalOpen, setIsHabitsModalOpen] = useState(false);
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [checkInMessage, setCheckInMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({
+    message: '',
+    type: 'info',
+    isVisible: false,
+  });
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+      } else {
+        setLoading(false);
+        fetchStreaks(session.user.id);
+      }
+    };
+    checkSession();
+  }, [router]);
+
+  const fetchStreaks = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('streaks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching streaks:', error);
+        setToast({
+          message: 'Failed to load your habits. Please try refreshing the page.',
+          type: 'error',
+          isVisible: true,
+        });
+        return;
+      }
+
+      if (data) {
+        setStreaks(data);
+        // Calculate totals
+        const totalCurrent = data.reduce((sum, streak) => sum + (streak.current_streak || 0), 0);
+        const totalLongest = data.reduce((sum, streak) => sum + (streak.longest_streak || 0), 0);
+        const activeCount = data.length;
+        setCurrentStreak(totalCurrent);
+        setLongestStreak(totalLongest);
+        setTotalActive(activeCount);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching streaks:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setToast({
+        message: errorMessage.includes('fetch') || errorMessage.includes('network')
+          ? 'Network error. Please check your connection and try again.'
+          : 'Failed to load your habits. Please try refreshing the page.',
+        type: 'error',
+        isVisible: true,
+      });
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
+  const handleAddHabit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newHabit.trim()) {
+      setToast({
+        message: 'Please enter a habit name',
+        type: 'error',
+        isVisible: true,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setToast({
+          message: 'Session expired. Please log in again.',
+          type: 'error',
+          isVisible: true,
+        });
+        router.push('/login');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('streaks')
+        .insert([{ user_id: session.user.id, habit: newHabit.trim() }]);
+      
+      if (!error) {
+        setIsAddModalOpen(false);
+        const habitName = newHabit.trim();
+        setNewHabit('');
+        setToast({
+          message: `Habit "${habitName}" added successfully! 🎉`,
+          type: 'success',
+          isVisible: true,
+        });
+        await fetchStreaks(session.user.id);
+      } else {
+        const errorMessage = error.message.includes('network') || error.message.includes('fetch')
+          ? 'Network error. Please check your connection and try again.'
+          : error.message;
+        setToast({
+          message: `Error: ${errorMessage}`,
+          type: 'error',
+          isVisible: true,
+        });
+      }
+    } catch (err) {
+      console.error('Error adding habit:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      setToast({
+        message: errorMessage.includes('fetch') || errorMessage.includes('network')
+          ? 'Network error. Please check your connection and try again.'
+          : 'Failed to add habit. Please try again.',
+        type: 'error',
+        isVisible: true,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCheckIn = async (habitId: string) => {
+    setIsSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setToast({
+          message: 'Session expired. Please log in again.',
+          type: 'error',
+          isVisible: true,
+        });
+        router.push('/login');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const habit = streaks.find(s => s.id === habitId);
+      if (!habit) {
+        setToast({
+          message: 'Habit not found. Please refresh the page.',
+          type: 'error',
+          isVisible: true,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const lastCheck = habit.last_check_in ? new Date(habit.last_check_in).toISOString().split('T')[0] : null;
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      // Check if already checked in today
+      if (lastCheck === today) {
+        setCheckInMessage('You already checked in today! Keep it up! 🔥');
+        setIsCheckInModalOpen(true);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Reset streak if missed a day (not yesterday)
+      let newCurrent = habit.current_streak || 0;
+      if (lastCheck && lastCheck !== yesterdayStr && lastCheck !== today) {
+        newCurrent = 1; // Reset to 1 for today
+      } else {
+        newCurrent = (newCurrent || 0) + 1;
+      }
+
+      const newLongest = Math.max(habit.longest_streak || 0, newCurrent);
+
+      const { error } = await supabase
+        .from('streaks')
+        .update({ 
+          current_streak: newCurrent, 
+          longest_streak: newLongest, 
+          last_check_in: new Date().toISOString() 
+        })
+        .eq('id', habitId);
+
+      if (!error) {
+        setCheckInMessage(`Great job! Your streak is now ${newCurrent} days! 🎉`);
+        setIsCheckInModalOpen(true);
+        await fetchStreaks(session.user.id);
+      } else {
+        const errorMessage = error.message.includes('network') || error.message.includes('fetch')
+          ? 'Network error. Please check your connection and try again.'
+          : error.message;
+        setToast({
+          message: `Error: ${errorMessage}`,
+          type: 'error',
+          isVisible: true,
+        });
+      }
+    } catch (err) {
+      console.error('Error checking in:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      setToast({
+        message: errorMessage.includes('fetch') || errorMessage.includes('network')
+          ? 'Network error. Please check your connection and try again.'
+          : 'Failed to check in. Please try again.',
+        type: 'error',
+        isVisible: true,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getStreakEmoji = (days: number) => {
+    if (days >= 100) return '💎';
+    if (days >= 50) return '🏆';
+    if (days >= 30) return '⭐';
+    if (days >= 7) return '🔥';
+    if (days >= 3) return '✨';
+    return '🌱';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-primary">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent mb-4"></div>
+          <p className="text-green-300 text-lg">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen p-4 relative overflow-hidden" style={{ background: 'radial-gradient(circle at center, #064e3b, #022c22, #000000)' }}>
-      {/* Subtle dot pattern */}
-      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #16a34a 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 relative overflow-hidden bg-gradient-primary">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 bg-dot-pattern"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-glow-blob opacity-20 animate-pulse-glow"></div>
 
-      <div className="max-w-6xl mx-auto relative z-10">
-        <h1 className="text-3xl md:text-4xl font-bold text-center text-transparent bg-gradient-to-r from-green-50 via-lime-100 to-green-200 bg-clip-text mb-8 uppercase drop-shadow-xl" style={{ textShadow: '0 0 25px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.5), 3px 3px 6px rgba(0,0,0,0.6)' }}>
-          Your Streak Dashboard
-        </h1>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-green-900 p-6 rounded-lg shadow-lg border border-green-700 transition-all duration-500 hover:scale-[1.02]">
-            <h3 className="text-lg font-semibold text-green-100 mb-2">Current Streak</h3>
-            <p className="text-3xl font-bold text-green-300">{currentStreak} days</p>
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gradient-primary mb-2 uppercase tracking-tight">
+              Your Dashboard
+            </h1>
+            <p className="text-green-300 text-sm md:text-base">Track your progress and build lasting habits</p>
           </div>
-          <div className="bg-green-900 p-6 rounded-lg shadow-lg border border-green-700 transition-all duration-500 hover:scale-[1.02]">
-            <h3 className="text-lg font-semibold text-green-100 mb-2">Longest Streak</h3>
-            <p className="text-3xl font-bold text-green-300">{longestStreak} days</p>
-          </div>
-          <div className="bg-green-900 p-6 rounded-lg shadow-lg border border-green-700 transition-all duration-500 hover:scale-[1.02]">
-            <h3 className="text-lg font-semibold text-green-100 mb-2">Total Active</h3>
-            <p className="text-3xl font-bold text-green-300">{totalActive} days</p>
-          </div>
-        </div>
-
-        {/* Bento Grid for Streak Progress */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-green-900 p-6 rounded-lg shadow-lg border border-green-700">
-            <h2 className="text-2xl font-bold mb-4 text-green-100">Streak Progress</h2>
-            <div className="mb-4">
-              <div className="w-full bg-green-800 rounded-full h-8 overflow-hidden">
-                <div
-                  className="h-8 rounded-full transition-all duration-500"
-                  style={{ width: `${(currentStreak / 30) * 100}%`, background: 'radial-gradient(circle, #16a34a, #22c55e)' }}
-                ></div>
-              </div>
-            </div>
-            <p className="text-green-300">
-              Keep it up! Every day counts towards your recovery.
-            </p>
-          </div>
-
-          <div className="bg-green-900 p-6 rounded-lg shadow-lg border border-green-700">
-            <h2 className="text-2xl font-bold mb-4 text-green-100">Daily Check-in</h2>
-            <button className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-500 hover:scale-105 shadow-lg hover:shadow-xl">
-              Mark Today Done
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="btn-primary text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center gap-2"
+            >
+              <span>➕</span>
+              <span>Add Habit</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="btn-secondary text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center gap-2"
+            >
+              <span>🚪</span>
+              <span>Logout</span>
             </button>
           </div>
         </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+          <div className="stat-card p-6 rounded-2xl glass-card-hover cursor-pointer" onClick={() => setIsHabitsModalOpen(true)}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-green-100">Current Streak</h3>
+              <span className="text-3xl">🔥</span>
+            </div>
+            <p className="text-4xl font-bold text-green-300 mb-1">{currentStreak}</p>
+            <p className="text-sm text-green-400">Total days across all habits</p>
+          </div>
+          <div className="stat-card p-6 rounded-2xl glass-card-hover">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-green-100">Longest Streak</h3>
+              <span className="text-3xl">🏆</span>
+            </div>
+            <p className="text-4xl font-bold text-green-300 mb-1">{longestStreak}</p>
+            <p className="text-sm text-green-400">Your personal best</p>
+          </div>
+          <div className="stat-card p-6 rounded-2xl glass-card-hover cursor-pointer" onClick={() => setIsHabitsModalOpen(true)}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-green-100">Active Habits</h3>
+              <span className="text-3xl">📋</span>
+            </div>
+            <p className="text-4xl font-bold text-green-300 mb-1">{totalActive}</p>
+            <p className="text-sm text-green-400">Habits you're tracking</p>
+          </div>
+        </div>
+
+        {/* Habits Grid */}
+        {streaks.length === 0 ? (
+          <div className="glass-card p-12 rounded-2xl text-center">
+            <div className="text-6xl mb-4">🌱</div>
+            <h2 className="text-2xl font-bold text-green-200 mb-2">No habits yet</h2>
+            <p className="text-green-300 mb-6">Start your journey by adding your first habit!</p>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="btn-primary text-white font-bold py-3 px-8 rounded-xl shadow-lg"
+            >
+              Add Your First Habit
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {streaks.map((streak) => {
+              const progress = streak.longest_streak > 0 
+                ? Math.min((streak.current_streak / Math.max(streak.longest_streak, 30)) * 100, 100)
+                : 0;
+              const isCheckedToday = streak.last_check_in 
+                ? new Date(streak.last_check_in).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
+                : false;
+
+              return (
+                <div key={streak.id} className="glass-card p-6 rounded-2xl glass-card-hover">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-3xl">{getStreakEmoji(streak.current_streak)}</span>
+                        <h2 className="text-xl font-bold text-green-100">{streak.habit}</h2>
+                      </div>
+                      <div className="flex gap-4 text-sm text-green-300">
+                        <span>Current: <strong className="text-green-200">{streak.current_streak || 0}</strong> days</span>
+                        <span>Best: <strong className="text-green-200">{streak.longest_streak || 0}</strong> days</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mb-4">
+                    <div className="w-full bg-green-800/50 rounded-full h-3 overflow-hidden">
+                      <div
+                        className="progress-bar h-3 rounded-full transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-green-400 mt-1">
+                      {Math.round(progress)}% of your best streak
+                    </p>
+                  </div>
+
+                  {/* Check-in Button */}
+                  <button
+                    onClick={() => handleCheckIn(streak.id)}
+                    disabled={isSubmitting || isCheckedToday}
+                    className={`w-full font-bold py-3 px-4 rounded-xl transition-all shadow-lg ${
+                      isCheckedToday
+                        ? 'bg-green-800/50 text-green-400 cursor-not-allowed'
+                        : 'btn-primary text-white'
+                    } ${isSubmitting ? 'opacity-50 cursor-wait' : ''}`}
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        <span>Processing...</span>
+                      </span>
+                    ) : isCheckedToday ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span>✅</span>
+                        <span>Checked In Today</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <span>🔥</span>
+                        <span>Check In Today</span>
+                      </span>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {/* Add Habit Modal */}
+      {isAddModalOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 modal-overlay"
+            onClick={() => setIsAddModalOpen(false)}
+          ></div>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="glass-card p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full relative modal-content">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="absolute top-4 right-4 text-green-400 hover:text-green-300 text-3xl font-bold z-20 w-10 h-10 flex items-center justify-center rounded-full hover:bg-green-900/50 transition-all"
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+              <div className="relative z-10">
+                <div className="text-center mb-6">
+                  <span className="text-5xl mb-3 block">✨</span>
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 uppercase text-gradient-secondary">
+                    Add New Habit
+                  </h2>
+                  <p className="text-green-300 text-sm">What habit do you want to track?</p>
+                </div>
+                <form onSubmit={handleAddHabit} className="space-y-5">
+                  <div>
+                    <label className="block text-green-300 mb-2 text-sm font-medium">
+                      Habit Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newHabit}
+                      onChange={(e) => setNewHabit(e.target.value)}
+                      className="input-modern w-full px-4 py-3 rounded-xl text-green-100 placeholder-green-500/50"
+                      placeholder="e.g., Daily Exercise, Meditation, Reading"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn-primary w-full text-white font-bold py-3 px-4 rounded-xl text-lg shadow-lg disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        <span>Adding...</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <span>➕</span>
+                        <span>Add Habit</span>
+                      </span>
+                    )}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Habits List Modal */}
+      {isHabitsModalOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 modal-overlay"
+            onClick={() => setIsHabitsModalOpen(false)}
+          ></div>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="glass-card p-8 md:p-10 rounded-2xl shadow-2xl max-w-2xl w-full relative modal-content max-h-[90vh] overflow-y-auto">
+              <button
+                onClick={() => setIsHabitsModalOpen(false)}
+                className="absolute top-4 right-4 text-green-400 hover:text-green-300 text-3xl font-bold z-20 w-10 h-10 flex items-center justify-center rounded-full hover:bg-green-900/50 transition-all"
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+              <div className="relative z-10">
+                <div className="text-center mb-6">
+                  <span className="text-5xl mb-3 block">📋</span>
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 uppercase text-gradient-secondary">
+                    Your Active Habits
+                  </h2>
+                  <p className="text-green-300 text-sm">{streaks.length} habit{streaks.length !== 1 ? 's' : ''} tracked</p>
+                </div>
+                <div className="space-y-3">
+                  {streaks.map((streak) => (
+                    <div key={streak.id} className="glass-card p-4 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{getStreakEmoji(streak.current_streak)}</span>
+                        <div>
+                          <h3 className="font-bold text-green-100">{streak.habit}</h3>
+                          <p className="text-sm text-green-400">
+                            {streak.current_streak || 0} days • Best: {streak.longest_streak || 0} days
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsHabitsModalOpen(false);
+                          handleCheckIn(streak.id);
+                        }}
+                        disabled={isSubmitting}
+                        className="btn-primary text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-50"
+                      >
+                        Check In
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Check-in Message Modal */}
+      {isCheckInModalOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 modal-overlay"
+            onClick={() => {
+              setIsCheckInModalOpen(false);
+              setCheckInMessage('');
+            }}
+          ></div>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="glass-card p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full relative modal-content">
+              <div className="text-center">
+                <span className="text-6xl mb-4 block">
+                  {checkInMessage.includes('Error') ? '❌' : checkInMessage.includes('already') ? '🔥' : '🎉'}
+                </span>
+                <h2 className="text-2xl md:text-3xl font-bold mb-4 uppercase text-gradient-secondary">
+                  {checkInMessage.includes('Error') ? 'Oops!' : 'Great Job!'}
+                </h2>
+                <p className="text-green-200 text-lg mb-6">{checkInMessage || 'Check-in successful!'}</p>
+                <button
+                  onClick={() => {
+                    setIsCheckInModalOpen(false);
+                    setCheckInMessage('');
+                  }}
+                  className="btn-primary text-white font-bold py-3 px-8 rounded-xl shadow-lg"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </div>
   );
 }

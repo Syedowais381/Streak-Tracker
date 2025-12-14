@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../lib/supabase';
+import Toast from './components/Toast';
 
 const quotes = [
   "\"The only way to do great work is to love what you do.\" - Steve Jobs",
@@ -22,101 +24,226 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [randomQuote, setRandomQuote] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({
+    message: '',
+    type: 'info',
+    isVisible: false,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setIsLoaded(true);
-  }, []);
 
-  const handleSignup = (e: React.FormEvent) => {
+    // Check if user is already logged in and redirect to dashboard
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          router.push('/dashboard');
+        }
+      } catch (err) {
+        // Silently handle auth check errors
+        console.error('Auth check error:', err);
+      }
+    };
+    checkUser();
+  }, [router]);
+
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Dummy signup: any email/pass works
-    if (email && password) {
-      // Simulate signup success
-      setIsModalOpen(false);
-      router.push('/dashboard');
+    
+    // Password validation
+    if (password.length < 6) {
+      setToast({
+        message: 'Password must be at least 6 characters long',
+        type: 'error',
+        isVisible: true,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      if (error) {
+        setToast({
+          message: error.message,
+          type: 'error',
+          isVisible: true,
+        });
+      } else {
+        setToast({
+          message: 'Check your email for the confirmation link! 📧',
+          type: 'success',
+          isVisible: true,
+        });
+        setIsModalOpen(false);
+        setEmail('');
+        setPassword('');
+      }
+    } catch (err) {
+      console.error('Signup error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.';
+      setToast({
+        message: errorMessage.includes('fetch') || errorMessage.includes('network') 
+          ? 'Network error. Please check your connection and try again.'
+          : 'An unexpected error occurred. Please try again.',
+        type: 'error',
+        isVisible: true,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: 'radial-gradient(circle at center, #064e3b, #022c22, #000000)' }}>
-      {/* Subtle dot pattern */}
-      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #16a34a 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-      {/* Glowing blob */}
-      <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #16a34a, #22c55e)' }}></div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-primary">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 bg-dot-pattern"></div>
+      <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-glow-blob animate-pulse-glow"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-glow-blob opacity-20 animate-pulse-glow" style={{ animationDelay: '1s' }}></div>
 
-      <div className="max-w-4xl mx-auto text-center relative z-10">
-        <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-gradient-to-r from-green-50 via-lime-100 to-green-200 bg-clip-text mb-8 uppercase tracking-tight drop-shadow-2xl" style={{ textShadow: '0 0 30px rgba(34, 197, 94, 0.9), 0 0 60px rgba(34, 197, 94, 0.5), 4px 4px 8px rgba(0,0,0,0.7)' }}>
-          Streak Tracker
-        </h1>
-        <blockquote className={`text-xl md:text-2xl italic text-green-300 mb-8 md:mb-12 leading-relaxed ${isLoaded ? 'animate-fade-in' : 'opacity-0'}`}>
+      <div className="max-w-5xl mx-auto text-center relative z-10 px-4">
+        <div className="animate-slide-up">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-gradient-primary mb-6 md:mb-8 uppercase tracking-tighter leading-tight">
+            Streak Tracker
+          </h1>
+          <div className="w-24 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent mx-auto mb-8"></div>
+        </div>
+        
+        <blockquote className={`text-xl md:text-2xl lg:text-3xl italic text-green-200 mb-10 md:mb-14 leading-relaxed max-w-3xl mx-auto ${isLoaded ? 'animate-fade-in' : 'opacity-0'}`}>
+          <span className="text-green-400 text-3xl md:text-4xl mr-3">"</span>
           {randomQuote}
+          <span className="text-green-400 text-3xl md:text-4xl ml-3">"</span>
         </blockquote>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+        
+        <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center mb-10 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <button
             onClick={() => router.push('/login')}
-            className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg transition-all duration-500 hover:scale-105 shadow-lg"
+            className="btn-primary text-white font-bold py-4 px-10 rounded-xl text-lg md:text-xl shadow-lg"
           >
-            Login
+            <span className="flex items-center justify-center gap-2">
+              <span>🚀</span>
+              <span>Login</span>
+            </span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-green-800 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-500 hover:scale-105 shadow-lg"
+            className="btn-secondary text-white font-bold py-4 px-10 rounded-xl text-lg md:text-xl shadow-lg"
           >
-            Sign Up
+            <span className="flex items-center justify-center gap-2">
+              <span>✨</span>
+              <span>Sign Up</span>
+            </span>
           </button>
         </div>
-        <p className="text-green-400 text-sm">Join 1,000+ builders on their journey</p>
+        
+        <div className="flex items-center justify-center gap-2 text-green-300 text-sm md:text-base animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <span className="text-green-400">🔥</span>
+          <p>Join <span className="font-bold text-green-200">1,000+</span> builders on their journey</p>
+          <span className="text-green-400">🔥</span>
+        </div>
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-green-900 p-8 rounded-lg shadow-xl max-w-md w-full mx-4 border border-green-700 relative">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-2 right-2 text-green-400 hover:text-green-300 text-2xl font-bold"
-            >
-              ×
-            </button>
-            <h2 className="text-xl md:text-2xl font-bold mb-4 text-center uppercase text-transparent bg-gradient-to-r from-green-50 via-lime-100 to-green-200 bg-clip-text" style={{ textShadow: '0 0 15px rgba(34, 197, 94, 0.6), 1px 1px 2px rgba(0,0,0,0.5)' }}>Sign Up</h2>
-            <form onSubmit={handleSignup}>
-              <div className="mb-4">
-                <label className="block text-green-300 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-800 text-green-100"
-                  required
-                />
-              </div>
-              <div className="mb-6">
-                <label className="block text-green-300 mb-2">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-green-800 text-green-100"
-                  required
-                />
-              </div>
+        <Fragment>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 modal-overlay"
+            onClick={() => setIsModalOpen(false)}
+          ></div>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="glass-card p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full relative modal-content">
               <button
-                type="submit"
-                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg transition-all duration-500 hover:scale-105 shadow-lg"
+                onClick={() => setIsModalOpen(false)}
+                className="absolute top-4 right-4 text-green-400 hover:text-green-300 text-3xl font-bold z-20 w-10 h-10 flex items-center justify-center rounded-full hover:bg-green-900/50 transition-all"
+                aria-label="Close modal"
               >
-                Sign Up
+                ×
               </button>
-            </form>
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="mt-4 text-green-400 hover:text-green-300 block mx-auto"
-            >
-              Close
-            </button>
+              <div className="relative z-10">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 uppercase text-gradient-secondary">
+                    Create Account
+                  </h2>
+                  <p className="text-green-300 text-sm">Start your journey today</p>
+                </div>
+                <form onSubmit={handleSignup} className="space-y-5">
+                  <div>
+                    <label className="block text-green-300 mb-2 text-sm font-medium">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="input-modern w-full px-4 py-3 rounded-xl text-green-100 placeholder-green-500/50"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-green-300 mb-2 text-sm font-medium">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="input-modern w-full px-4 py-3 rounded-xl text-green-100 placeholder-green-500/50"
+                      placeholder="•••••••• (min. 6 characters)"
+                      required
+                      minLength={6}
+                    />
+                    {password.length > 0 && password.length < 6 && (
+                      <p className="text-red-400 text-xs mt-1">Password must be at least 6 characters</p>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn-primary w-full text-white font-bold py-3 px-4 rounded-xl text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        <span>Creating Account...</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <span>✨</span>
+                        <span>Sign Up</span>
+                      </span>
+                    )}
+                  </button>
+                </form>
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="text-green-400 hover:text-green-300 text-sm transition-colors"
+                  >
+                    Already have an account? <span className="font-semibold">Login</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </Fragment>
       )}
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </div>
   );
 }
