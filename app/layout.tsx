@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Oswald } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const oswald = Oswald({
-  variable: "--font-oswald",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${oswald.variable} antialiased font-sans`}
+        className={`${inter.variable} antialiased font-sans`}
       >
         {children}
       </body>

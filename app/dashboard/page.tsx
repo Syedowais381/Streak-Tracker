@@ -265,81 +265,97 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8 relative overflow-hidden bg-gradient-primary">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 bg-dot-pattern"></div>
-      <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-glow-blob opacity-20 animate-pulse-glow"></div>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-primary">
+      {/* Background */}
+      <div className="fixed inset-0 bg-dot-pattern" />
+      <div className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-glow-blob animate-pulse-glow" />
+      <div className="fixed bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-glow-blob opacity-20 animate-pulse-glow anim-delay-1000" />
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gradient-primary mb-2 uppercase tracking-tight">
-              Your Dashboard
-            </h1>
-            <p className="text-green-300 text-sm md:text-base">Track your progress and build lasting habits</p>
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 nav-glass">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+          <a
+            href="/"
+            className="text-green-100 font-extrabold tracking-tight uppercase text-lg md:text-xl text-shadow-glow-sm whitespace-nowrap"
+          >
+            Streak Tracker
+          </a>
+
+          <div className="ml-auto flex items-center gap-5 md:gap-8">
+            <button
+              onClick={handleLogout}
+              className="btn-primary text-white font-bold py-2.5 px-5 rounded-xl shadow-lg text-sm md:text-base whitespace-nowrap shrink-0"
+            >
+              Logout
+            </button>
           </div>
-          <div className="flex gap-3">
+        </div>
+      </header>
+
+      <main className="relative z-10 pt-16 sm:pt-20">
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 md:py-12">
+        {/* Dashboard Title */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8 gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-neon-hero mb-4 sm:mb-6 md:mb-8 uppercase tracking-tighter leading-tight animate-float">
+              YOUR DASHBOARD
+            </h1>
+            <p className="text-green-300 text-xs sm:text-sm md:text-base">Track your progress and build lasting habits</p>
+          </div>
+          <div className="flex gap-3 w-full md:w-auto">
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="btn-primary text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center gap-2"
+              className="btn-primary text-white font-bold py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg flex items-center gap-2 text-sm sm:text-base w-full md:w-auto justify-center"
             >
               <span>➕</span>
               <span>Add Habit</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="btn-secondary text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center gap-2"
-            >
-              <span>🚪</span>
-              <span>Logout</span>
             </button>
           </div>
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
-          <div className="stat-card p-6 rounded-2xl glass-card-hover cursor-pointer" onClick={() => setIsHabitsModalOpen(true)}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-green-100">Current Streak</h3>
-              <span className="text-3xl">🔥</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8">
+          <div className="stat-card p-4 sm:p-5 md:p-6 rounded-2xl glass-card-hover cursor-pointer" onClick={() => setIsHabitsModalOpen(true)}>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-base sm:text-lg font-semibold text-green-100">Current Streak</h3>
+              <span className="text-2xl sm:text-3xl">🔥</span>
             </div>
-            <p className="text-4xl font-bold text-green-300 mb-1">{currentStreak}</p>
-            <p className="text-sm text-green-400">Total days across all habits</p>
+            <p className="text-3xl sm:text-4xl font-bold text-green-300 mb-1">{currentStreak}</p>
+            <p className="text-xs sm:text-sm text-green-400">Total days across all habits</p>
           </div>
-          <div className="stat-card p-6 rounded-2xl glass-card-hover">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-green-100">Longest Streak</h3>
-              <span className="text-3xl">🏆</span>
+          <div className="stat-card p-4 sm:p-5 md:p-6 rounded-2xl glass-card-hover">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-base sm:text-lg font-semibold text-green-100">Longest Streak</h3>
+              <span className="text-2xl sm:text-3xl">🏆</span>
             </div>
-            <p className="text-4xl font-bold text-green-300 mb-1">{longestStreak}</p>
-            <p className="text-sm text-green-400">Your personal best</p>
+            <p className="text-3xl sm:text-4xl font-bold text-green-300 mb-1">{longestStreak}</p>
+            <p className="text-xs sm:text-sm text-green-400">Your personal best</p>
           </div>
-          <div className="stat-card p-6 rounded-2xl glass-card-hover cursor-pointer" onClick={() => setIsHabitsModalOpen(true)}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-green-100">Active Habits</h3>
-              <span className="text-3xl">📋</span>
+          <div className="stat-card p-4 sm:p-5 md:p-6 rounded-2xl glass-card-hover cursor-pointer sm:col-span-2 md:col-span-1" onClick={() => setIsHabitsModalOpen(true)}>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-base sm:text-lg font-semibold text-green-100">Active Habits</h3>
+              <span className="text-2xl sm:text-3xl">📋</span>
             </div>
-            <p className="text-4xl font-bold text-green-300 mb-1">{totalActive}</p>
-            <p className="text-sm text-green-400">Habits you're tracking</p>
+            <p className="text-3xl sm:text-4xl font-bold text-green-300 mb-1">{totalActive}</p>
+            <p className="text-xs sm:text-sm text-green-400">Habits you're tracking</p>
           </div>
         </div>
 
         {/* Habits Grid */}
         {streaks.length === 0 ? (
-          <div className="glass-card p-12 rounded-2xl text-center">
-            <div className="text-6xl mb-4">🌱</div>
-            <h2 className="text-2xl font-bold text-green-200 mb-2">No habits yet</h2>
-            <p className="text-green-300 mb-6">Start your journey by adding your first habit!</p>
+          <div className="glass-card p-8 sm:p-10 md:p-12 rounded-2xl text-center">
+            <div className="text-5xl sm:text-6xl mb-4">🌱</div>
+            <h2 className="text-xl sm:text-2xl font-bold text-green-200 mb-2">No habits yet</h2>
+            <p className="text-green-300 mb-6 text-sm sm:text-base">Start your journey by adding your first habit!</p>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="btn-primary text-white font-bold py-3 px-8 rounded-xl shadow-lg"
+              className="btn-primary text-white font-bold py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl shadow-lg text-sm sm:text-base"
             >
               Add Your First Habit
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
             {streaks.map((streak) => {
               const progress = streak.longest_streak > 0 
                 ? Math.min((streak.current_streak / Math.max(streak.longest_streak, 30)) * 100, 100)
@@ -380,7 +396,7 @@ export default function Dashboard() {
                   <button
                     onClick={() => handleCheckIn(streak.id)}
                     disabled={isSubmitting || isCheckedToday}
-                    className={`w-full font-bold py-3 px-4 rounded-xl transition-all shadow-lg ${
+                    className={`w-full font-bold py-2.5 sm:py-3 px-4 rounded-xl transition-all shadow-lg text-sm sm:text-base ${
                       isCheckedToday
                         ? 'bg-green-800/50 text-green-400 cursor-not-allowed'
                         : 'btn-primary text-white'
@@ -408,7 +424,8 @@ export default function Dashboard() {
             })}
           </div>
         )}
-      </div>
+        </div>
+      </main>
 
       {/* Add Habit Modal */}
       {isAddModalOpen && (

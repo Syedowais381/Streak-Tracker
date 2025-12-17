@@ -56,13 +56,40 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-primary">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 bg-dot-pattern"></div>
-      <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-glow-blob opacity-20 animate-pulse-glow"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-glow-blob opacity-25 animate-pulse-glow" style={{ animationDelay: '1.5s' }}></div>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-primary">
+      {/* Background */}
+      <div className="fixed inset-0 bg-dot-pattern" />
+      <div className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-glow-blob animate-pulse-glow" />
+      <div className="fixed bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-glow-blob opacity-20 animate-pulse-glow anim-delay-1000" />
 
-      <div className="glass-card p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full relative z-10 animate-scale-in">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 nav-glass">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+          <a
+            href="/"
+            className="text-green-100 font-extrabold tracking-tight uppercase text-lg md:text-xl text-shadow-glow-sm whitespace-nowrap"
+          >
+            Streak Tracker
+          </a>
+          <div className="ml-auto flex items-center gap-5 md:gap-8">
+            <button
+              onClick={() => router.push('/')}
+              className="nav-link text-sm font-semibold whitespace-nowrap"
+            >
+              Home
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="btn-primary text-white font-bold py-2.5 px-5 rounded-xl shadow-lg text-sm md:text-base whitespace-nowrap shrink-0"
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex items-center justify-center min-h-screen p-4 pt-20 sm:pt-24 relative z-10">
+        <div className="glass-card p-6 sm:p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full animate-scale-in">
         <div className="text-center mb-8">
           <div className="inline-block mb-4">
             <span className="text-5xl">🔥</span>
@@ -129,6 +156,7 @@ export default function Login() {
               Sign Up
             </button>
           </p>
+        </div>
         </div>
       </div>
 
