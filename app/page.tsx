@@ -179,7 +179,7 @@ export default function Home() {
           const leaderboardWithUsers = sortedStreaks.slice(0, 10).map(streak => ({
             ...streak,
             user_email: null,
-            user_name: getUserDisplayName(streak.user_id),
+            user_name: 'Unknown User',
           }));
           
           setLeaderboard(leaderboardWithUsers);
