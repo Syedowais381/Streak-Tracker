@@ -40,11 +40,52 @@ export default function Dashboard() {
         router.push('/login');
       } else {
         setLoading(false);
+        await ensureProfileExists(session.user);
         fetchStreaks(session.user.id);
       }
     };
     checkSession();
   }, [router]);
+
+  const ensureProfileExists = async (user: any) => {
+    try {
+      // Check if profile exists
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('Error checking profile:', fetchError);
+        return;
+      }
+
+      if (!existingProfile) {
+        // Profile doesn't exist, create it from user metadata
+        const username = user.user_metadata?.username || 'User';
+        const age = user.user_metadata?.age ? parseInt(user.user_metadata.age) : 25;
+
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert([
+            {
+              user_id: user.id,
+              username: username,
+              age: age,
+            },
+          ]);
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+        } else {
+          console.log('Profile created successfully');
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error ensuring profile:', err);
+    }
+  };
 
   const fetchStreaks = async (userId: string) => {
     try {

@@ -4,64 +4,89 @@ import { NextResponse } from 'next/server';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Use service role key to bypass RLS and fetch user emails (if available)
+// Use service role key to bypass RLS for admin operations
 const supabaseAdmin = supabaseServiceKey 
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
 
 export async function GET() {
   try {
-    // If no service key, use regular client (will respect RLS)
     const supabaseClient = supabaseAdmin || createClient(
       supabaseUrl,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // Fetch streaks with user_ids
-    const { data: streaks, error: streaksError } = await supabaseClient
+    // Fetch the highest streak per user with their profile information
+    // This query groups by user_id and gets the maximum streak for each user
+    const { data: leaderboardData, error: leaderboardError } = await supabaseClient
       .from('streaks')
-      .select('id, habit, current_streak, user_id')
-      .order('current_streak', { ascending: false })
-      .limit(20);
+      .select('user_id, current_streak')
+      .order('current_streak', { ascending: false });
 
-    if (streaksError) {
-      console.error('Error fetching streaks:', streaksError);
-      return NextResponse.json({ error: streaksError.message }, { status: 500 });
+    if (leaderboardError) {
+      console.error('Error fetching streaks:', leaderboardError);
+      return NextResponse.json({ error: leaderboardError.message }, { status: 500 });
     }
 
-    if (!streaks || streaks.length === 0) {
+    if (!leaderboardData || leaderboardData.length === 0) {
       return NextResponse.json({ data: [] });
     }
 
-    // Try to fetch user emails if service key is available
-    const userEmailMap = new Map<string, string>();
-    if (supabaseAdmin) {
-      try {
-        const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
-        
-        if (!usersError && users) {
-          users.users.forEach(user => {
-            if (user.email) {
-              userEmailMap.set(user.id, user.email);
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Error fetching user emails:', err);
-        // Continue without emails
+    // Group by user_id and keep only the highest streak per user
+    const userStreakMap = new Map<string, number>();
+    leaderboardData.forEach((streak: any) => {
+      const currentMax = userStreakMap.get(streak.user_id) || 0;
+      if (streak.current_streak > currentMax) {
+        userStreakMap.set(streak.user_id, streak.current_streak);
       }
+    });
+
+    // Convert to array and sort by streak descending
+    const topUsers = Array.from(userStreakMap.entries())
+      .map(([userId, maxStreak]) => ({ userId, maxStreak }))
+      .sort((a, b) => b.maxStreak - a.maxStreak)
+      .slice(0, 20);
+
+    if (topUsers.length === 0) {
+      return NextResponse.json({ data: [] });
     }
 
-    // Combine streaks with user emails
-    const leaderboardData = streaks.map(streak => {
-      const email = userEmailMap.get(streak.user_id);
+    // Fetch user profiles for top users
+    const userIds = topUsers.map(u => u.userId);
+    const profileMap = new Map<string, { username: string; age: number }>();
+    
+    try {
+      const { data: profiles, error: profileError } = await supabaseClient
+        .from('user_profiles')
+        .select('user_id, username, age')
+        .in('user_id', userIds);
+
+      if (!profileError && profiles) {
+        profiles.forEach((profile: any) => {
+          profileMap.set(profile.user_id, {
+            username: profile.username,
+            age: profile.age,
+          });
+        });
+      } else if (profileError) {
+        console.warn('Error fetching profiles:', profileError.message);
+      }
+    } catch (err) {
+      console.warn('Error fetching profiles:', err);
+    }
+
+    // Build final leaderboard with usernames and highest streaks
+    const finalLeaderboard = topUsers.map(({ userId, maxStreak }) => {
+      const profile = profileMap.get(userId);
       return {
-        ...streak,
-        user_email: email || null,
+        user_id: userId,
+        username: profile?.username || 'Unknown User',
+        current_streak: maxStreak,
+        age: profile?.age || null,
       };
     });
 
-    return NextResponse.json({ data: leaderboardData });
+    return NextResponse.json({ data: finalLeaderboard });
   } catch (error) {
     console.error('Leaderboard API error:', error);
     return NextResponse.json(

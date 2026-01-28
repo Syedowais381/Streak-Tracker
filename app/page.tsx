@@ -40,9 +40,6 @@ type LeaderboardStreak = {
 };
 
 export default function Home() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -51,7 +48,6 @@ export default function Home() {
     type: 'info',
     isVisible: false,
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardStreak[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
 
@@ -156,68 +152,6 @@ export default function Home() {
     fetchLeaderboard();
   }, [router]);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Password validation
-    if (password.length < 6) {
-      setToast({
-        message: 'Password must be at least 6 characters long',
-        type: 'error',
-        isVisible: true,
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Use environment variable for production URL, fallback to current origin
-      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL
-        ? `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`
-        : `${window.location.origin}/dashboard`;
-
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-        },
-      });
-
-      if (error) {
-        setToast({
-          message: error.message,
-          type: 'error',
-          isVisible: true,
-        });
-        return;
-      }
-
-      setToast({
-        message: 'Check your email for the confirmation link! 📧',
-        type: 'success',
-        isVisible: true,
-      });
-
-      setIsModalOpen(false);
-      setEmail('');
-      setPassword('');
-    } catch (err) {
-      console.error('Signup error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
-      setToast({
-        message:
-          errorMessage.includes('fetch') || errorMessage.includes('network')
-            ? 'Network error. Please check your connection and try again.'
-            : 'An unexpected error occurred. Please try again.',
-        type: 'error',
-        isVisible: true,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const fetchLeaderboard = async () => {
     setLeaderboardLoading(true);
     try {
@@ -256,32 +190,23 @@ export default function Home() {
         return;
       }
       
-      const { data: streaksData } = await response.json();
+      const { data: leaderboardData } = await response.json();
       
       console.log('Leaderboard API result:', { 
-        dataCount: streaksData?.length || 0,
-        sampleData: streaksData?.slice(0, 3)
+        dataCount: leaderboardData?.length || 0,
+        sampleData: leaderboardData?.slice(0, 3)
       });
       
-      if (streaksData && streaksData.length > 0) {
-        // Sort by current_streak (handle null/0 values)
-        const sortedStreaks = [...streaksData].sort((a, b) => {
-          const aStreak = a.current_streak ?? 0;
-          const bStreak = b.current_streak ?? 0;
-          return bStreak - aStreak;
-        });
+      if (leaderboardData && leaderboardData.length > 0) {
+        // API already returns top users with highest streak per user
+        // Just map to include user_name for display
+        const topStreaks = leaderboardData.slice(0, 10).map((item: any) => ({
+          ...item,
+          user_name: item.username,
+          habit: 'Top Streak', // Leaderboard shows user's best streak, not a specific habit
+        }));
         
-        // Take top 10 streaks and add user names
-        const topStreaks = sortedStreaks.slice(0, 10).map(streak => {
-          const userName = extractNameFromEmail(streak.user_email) || getUserDisplayName(streak.user_id);
-          return {
-            ...streak,
-            user_name: userName,
-          };
-        });
-        
-        console.log('Top streaks for leaderboard:', topStreaks.map(s => ({
-          habit: s.habit,
+        console.log('Top streaks for leaderboard:', topStreaks.map((s: any) => ({
           streak: s.current_streak ?? 0,
           userName: s.user_name
         })));
@@ -344,36 +269,21 @@ export default function Home() {
   };
 
   // Helper function to generate user initials from email or user_id
-  const getUserInitials = (email: string | null | undefined, userId: string): string => {
-    if (email) {
-      const name = extractNameFromEmail(email);
-      if (name) {
-        const parts = name.split(' ');
-        if (parts.length >= 2) {
-          return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        if (parts[0].length >= 2) {
-          return parts[0].substring(0, 2).toUpperCase();
-        }
-      }
-      // Use first letter of email
-      return email.charAt(0).toUpperCase();
+  const getUserInitials = (username: string | null | undefined): string => {
+    if (!username) return 'US';
+    
+    // Get initials from username
+    const parts = username.split('_');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     
-    // Fallback to user_id
-    const chars = userId.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase();
-    if (chars.length >= 2) {
-      return chars;
+    // Single word username - get first two characters
+    if (username.length >= 2) {
+      return username.substring(0, 2).toUpperCase();
     }
-    return userId.substring(0, 2).toUpperCase();
-  };
-
-  // Helper function to generate display name from user_id (fallback)
-  const getUserDisplayName = (userId: string): string => {
-    // Generate a friendly name from user_id
-    // Extract first 6 characters and format as "Streaker ABC123"
-    const shortId = userId.substring(0, 6).toUpperCase();
-    return `Streaker ${shortId}`;
+    
+    return username.toUpperCase();
   };
 
   return (
@@ -421,7 +331,7 @@ export default function Home() {
             </button>
 
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => router.push('/signup')}
               className="btn-primary text-white font-bold py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl shadow-lg text-xs sm:text-sm md:text-base whitespace-nowrap shrink-0"
             >
               Get Started
@@ -500,7 +410,7 @@ export default function Home() {
                 </span>
               </button>
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => router.push('/signup')}
                 className="btn-primary text-white font-bold py-4 px-10 rounded-xl text-lg md:text-xl shadow-lg"
               >
                 <span className="flex items-center justify-center gap-2">
@@ -680,8 +590,8 @@ export default function Home() {
                   const rank = index + 1;
                   const isTop3 = rank <= 3;
                   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
-                  const userInitials = getUserInitials(streak.user_email, streak.user_id);
-                  const userName = streak.user_name || getUserDisplayName(streak.user_id);
+                  const userInitials = getUserInitials(streak.user_name);
+                  const userName = streak.user_name || 'Unknown User';
                   return (
                     <div
                       key={streak.id}
@@ -774,96 +684,6 @@ export default function Home() {
           </div>
         </footer>
       </main>
-
-      {/* Sign up modal */}
-      {isModalOpen && (
-        <Fragment>
-          <div
-            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 modal-overlay"
-            onClick={() => setIsModalOpen(false)}
-          />
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="glass-card p-8 md:p-10 rounded-2xl shadow-2xl max-w-md w-full relative modal-content">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="absolute top-4 right-4 text-green-400 hover:text-green-300 text-3xl font-bold z-20 w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-all"
-                aria-label="Close modal"
-              >
-                ×
-              </button>
-
-              <div className="relative z-10">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-extrabold mb-2 uppercase text-neon-heading">
-                    Create Account
-                  </h2>
-                  <p className="text-green-200/80 text-sm">Start your journey today</p>
-                </div>
-
-                <form onSubmit={handleSignup} className="space-y-5">
-                  <div>
-                    <label className="block text-green-200/90 mb-2 text-sm font-semibold">Email Address</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="input-modern w-full px-4 py-3 rounded-xl text-green-100 placeholder-green-500/60"
-                      placeholder="you@example.com"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-green-200/90 mb-2 text-sm font-semibold">Password</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="input-modern w-full px-4 py-3 rounded-xl text-green-100 placeholder-green-500/60"
-                      placeholder="•••••••• (min. 6 characters)"
-                      required
-                      minLength={6}
-                    />
-                    {password.length > 0 && password.length < 6 && (
-                      <p className="text-red-400 text-xs mt-1">Password must be at least 6 characters</p>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="btn-primary w-full text-white font-bold py-3 px-4 rounded-xl text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin">⏳</span>
-                        <span>Creating Account...</span>
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        <span>✨</span>
-                        <span>Sign Up</span>
-                      </span>
-                    )}
-                  </button>
-                </form>
-
-                <div className="mt-6 text-center">
-                  <button
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      router.push('/login');
-                    }}
-                    className="text-green-300 hover:text-green-200 text-sm transition-colors"
-                  >
-                    Already have an account? <span className="font-semibold underline">Login</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Fragment>
-      )}
 
       <Toast
         message={toast.message}

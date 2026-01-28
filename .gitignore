@@ -39,3 +39,29 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# documentation & debug files (local notes only)
+CHECKLIST_*.md
+DEBUG_*.md
+QUICK_*.md
+FIX_*.md
+MIGRATION_*.md
+RESET_*.md
+SIGNUP_*.md
+SMTP_*.md
+SUPABASE_*.md
+TABLE_*.md
+EMAIL_*.md
+*_SUMMARY.md
+*_GUIDE.md
+*_VERIFICATION.md
+*_CHECKLIST.md
+FINAL_SUMMARY.md
+SOLUTION_*.md
+IMPLEMENTATION_*.md
+
+# sql debug files
+*.sql
+
+# OS
+.vscode/
+.idea/
