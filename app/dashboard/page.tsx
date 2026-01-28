@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [totalActive, setTotalActive] = useState(0);
+  const [username, setUsername] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newHabit, setNewHabit] = useState('');
   const [isHabitsModalOpen, setIsHabitsModalOpen] = useState(false);
@@ -40,8 +41,11 @@ export default function Dashboard() {
         router.push('/login');
       } else {
         setLoading(false);
-        await ensureProfileExists(session.user);
-        fetchStreaks(session.user.id);
+        const user = session.user;
+        const userUsername = user.user_metadata?.username || 'Builder';
+        setUsername(userUsername);
+        await ensureProfileExists(user);
+        fetchStreaks(user.id);
       }
     };
     checkSession();
@@ -335,6 +339,14 @@ export default function Dashboard() {
 
       <main className="relative z-10 pt-16 sm:pt-20">
         <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 md:py-12">
+        {/* Personalized Greeting */}
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-green-100 mb-1">
+            Hi, {username}
+          </h2>
+          <p className="text-green-300 text-sm sm:text-base font-light">Here's your progress today</p>
+        </div>
+
         {/* Dashboard Title */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 sm:mb-8 gap-4">
           <div className="flex-1">

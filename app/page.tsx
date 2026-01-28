@@ -332,7 +332,7 @@ export default function Home() {
 
             <button
               onClick={() => router.push('/signup')}
-              className="btn-primary text-white font-bold py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl shadow-lg text-xs sm:text-sm md:text-base whitespace-nowrap shrink-0"
+              className="btn-primary text-white font-bold py-2 px-3 sm:py-2.5 sm:px-5 rounded-xl shadow-lg text-xs sm:text-sm md:text-base whitespace-nowrap shrink-0"
             >
               Get Started
             </button>
@@ -388,21 +388,21 @@ export default function Home() {
             </div>
 
             <blockquote
-              className={`text-xl md:text-2xl lg:text-3xl italic text-green-200 mb-10 md:mb-14 leading-relaxed max-w-3xl mx-auto ${
+              className={`text-base sm:text-lg md:text-2xl lg:text-3xl italic text-green-200 mb-8 sm:mb-10 md:mb-14 leading-relaxed max-w-3xl mx-auto ${
                 isLoaded ? 'animate-fade-in' : 'opacity-0'
               }`}
             >
-              <span className="text-green-400 text-3xl md:text-4xl mr-3">“</span>
+              <span className="text-green-400 text-2xl sm:text-3xl md:text-4xl mr-2 sm:mr-3">"</span>
               {HERO_QUOTE}
-              <span className="text-green-400 text-3xl md:text-4xl ml-3">”</span>
+              <span className="text-green-400 text-2xl sm:text-3xl md:text-4xl ml-2 sm:ml-3">"</span>
             </blockquote>
 
             <div
-              className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center mb-10 animate-slide-up anim-delay-200"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 justify-center mb-8 sm:mb-10 animate-slide-up anim-delay-200"
             >
               <button
                 onClick={() => router.push('/login')}
-                className="btn-outline-glass text-white font-bold py-4 px-10 rounded-xl text-lg md:text-xl shadow-lg"
+                className="btn-outline-glass text-white font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-xl text-base sm:text-lg md:text-xl shadow-lg"
               >
                 <span className="flex items-center justify-center gap-2">
                   <span>🚀</span>
@@ -411,7 +411,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => router.push('/signup')}
-                className="btn-primary text-white font-bold py-4 px-10 rounded-xl text-lg md:text-xl shadow-lg"
+                className="btn-primary text-white font-bold py-3 sm:py-4 px-6 sm:px-10 rounded-xl text-base sm:text-lg md:text-xl shadow-lg"
               >
                 <span className="flex items-center justify-center gap-2">
                   <span>✨</span>
@@ -517,9 +517,9 @@ export default function Home() {
             <div className="marquee">
               <div className="marquee-track">
                 <div className="flex shrink-0 gap-6 pr-6">
-                  {stories.map((s) => (
+                  {stories.map((s, index) => (
                     <div
-                      key={`a-${s.name}`}
+                      key={`story-${index}`}
                       className="glass-card glass-card-hover rounded-2xl p-6 min-w-[280px] md:min-w-[340px]"
                     >
                       <div className="flex items-center gap-4 mb-4">
@@ -537,9 +537,9 @@ export default function Home() {
                 </div>
 
                 <div className="flex shrink-0 gap-6 pr-6">
-                  {stories.map((s) => (
+                  {stories.map((s, index) => (
                     <div
-                      key={`b-${s.name}`}
+                      key={`story-duplicate-${index}`}
                       className="glass-card glass-card-hover rounded-2xl p-6 min-w-[280px] md:min-w-[340px]"
                     >
                       <div className="flex items-center gap-4 mb-4">
