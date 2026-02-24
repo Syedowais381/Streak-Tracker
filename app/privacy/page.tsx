@@ -1,147 +1,119 @@
-'use client';
+﻿'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 
 export default function PrivacyPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-primary">
-      {/* Background */}
-      <div className="fixed inset-0 bg-dot-pattern" />
-      <div className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-glow-blob animate-pulse-glow" />
-
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 nav-glass">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
-          <a
-            href="/"
-            className="text-green-100 font-extrabold tracking-tight uppercase text-lg md:text-xl text-shadow-glow-sm whitespace-nowrap"
-          >
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="app-container flex h-16 items-center justify-between">
+          <Link href="/" className="brand">
             Streak Tracker
-          </a>
-          <div className="ml-auto flex items-center gap-5 md:gap-8">
-            <a className="nav-link text-sm font-semibold whitespace-nowrap" href="/">
-              Home
-            </a>
-            <a className="nav-link text-sm font-semibold whitespace-nowrap" href="/terms">
+          </Link>
+          <div className="flex items-center gap-2">
+            <Link className="btn btn-ghost" href="/terms">
               Terms
-            </a>
+            </Link>
+            <button className="btn btn-ghost" onClick={() => router.push('/')}>
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-4 pt-20 sm:pt-24 pb-12 sm:pb-16">
-        <button
-          onClick={() => router.push('/')}
-          className="btn-outline-glass text-white font-bold py-2.5 px-5 rounded-xl shadow-lg"
-        >
-          ← Back
-        </button>
+      <main className="section">
+        <div className="app-container max-w-3xl">
+          <article className="surface-strong p-6 sm:p-8">
+            <p className="eyebrow">Legal</p>
+            <h1 className="mt-2">Privacy Policy</h1>
+            <p className="text-caption mt-2">Last Updated: {new Date().toLocaleDateString()}</p>
 
-        <div className="glass-card rounded-2xl p-6 md:p-8 lg:p-10 mt-6">
-          <h1 className="text-3xl md:text-4xl font-extrabold uppercase text-gradient-secondary mb-6">
-            Privacy Policy
-          </h1>
-          
-          <div className="space-y-6 text-green-200/85 leading-relaxed">
-            <div>
-              <p className="text-green-300/70 text-sm mb-2">Last Updated: {new Date().toLocaleDateString()}</p>
+            <div className="mt-6 space-y-6">
+              <section>
+                <h3>1. Introduction</h3>
+                <p className="text-body mt-2">
+                  Streak Tracker respects your privacy and is committed to protecting your personal data. This policy
+                  explains how we collect, use, and safeguard information when you use our service.
+                </p>
+              </section>
+
+              <section>
+                <h3>2. Information We Collect</h3>
+                <ul className="text-body mt-2 list-disc space-y-2 pl-5">
+                  <li>Account information such as email and password for authentication.</li>
+                  <li>Habit data including names, streak counts, and check-in dates.</li>
+                  <li>Usage data such as timestamps and interaction events.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3>3. How We Use Information</h3>
+                <ul className="text-body mt-2 list-disc space-y-2 pl-5">
+                  <li>Operate and maintain the product.</li>
+                  <li>Process your streak tracking data.</li>
+                  <li>Display anonymized leaderboard information.</li>
+                  <li>Improve reliability and user experience.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3>4. Storage and Security</h3>
+                <p className="text-body mt-2">
+                  Data is stored securely with Supabase. We apply reasonable security controls to protect against
+                  unauthorized access, disclosure, and modification.
+                </p>
+              </section>
+
+              <section>
+                <h3>5. Data Sharing</h3>
+                <p className="text-body mt-2">
+                  We do not sell personal data. Habit data remains private to your account. Leaderboard data is shown in
+                  limited public form.
+                </p>
+              </section>
+
+              <section>
+                <h3>6. Your Rights</h3>
+                <ul className="text-body mt-2 list-disc space-y-2 pl-5">
+                  <li>Access and review your data.</li>
+                  <li>Correct inaccurate information.</li>
+                  <li>Delete your account and associated data.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3>7. Cookies</h3>
+                <p className="text-body mt-2">
+                  We use essential cookies/session storage for authentication and core product operation.
+                </p>
+              </section>
+
+              <section>
+                <h3>8. Children&apos;s Privacy</h3>
+                <p className="text-body mt-2">The service is not intended for children under 13 years of age.</p>
+              </section>
+
+              <section>
+                <h3>9. Policy Changes</h3>
+                <p className="text-body mt-2">
+                  Policy updates may be posted on this page with a revised &quot;Last Updated&quot; date.
+                </p>
+              </section>
+
+              <section>
+                <h3>10. Contact</h3>
+                <p className="text-body mt-2">For privacy questions, contact us through the support channels listed on our website.</p>
+              </section>
             </div>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">1. Introduction</h2>
-              <p className="mb-3">
-                Welcome to Streak Tracker. We respect your privacy and are committed to protecting your personal data. 
-                This privacy policy explains how we collect, use, and safeguard your information when you use our service.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">2. Information We Collect</h2>
-              <p className="mb-3">We collect the following types of information:</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li><strong className="text-green-100">Account Information:</strong> Email address and password for account creation and authentication.</li>
-                <li><strong className="text-green-100">Habit Data:</strong> Information about habits you track, including habit names, streak counts, and check-in dates.</li>
-                <li><strong className="text-green-100">Usage Data:</strong> Information about how you interact with our service, including timestamps and feature usage.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">3. How We Use Your Information</h2>
-              <p className="mb-3">We use your information to:</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Provide and maintain our service</li>
-                <li>Process your habit tracking data</li>
-                <li>Display leaderboard information (anonymized)</li>
-                <li>Send you important updates about your account</li>
-                <li>Improve our service and user experience</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">4. Data Storage and Security</h2>
-              <p className="mb-3">
-                Your data is stored securely using Supabase, a trusted cloud database service. We implement 
-                industry-standard security measures to protect your information from unauthorized access, 
-                alteration, disclosure, or destruction.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">5. Data Sharing</h2>
-              <p className="mb-3">
-                We do not sell, trade, or rent your personal information to third parties. Your habit data 
-                is private and only visible to you. Leaderboard displays show only anonymized streak information 
-                without revealing personal details.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">6. Your Rights</h2>
-              <p className="mb-3">You have the right to:</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>Access your personal data</li>
-                <li>Correct inaccurate information</li>
-                <li>Delete your account and data</li>
-                <li>Opt-out of certain data processing activities</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">7. Cookies and Tracking</h2>
-              <p className="mb-3">
-                We use essential cookies to maintain your session and provide core functionality. 
-                We do not use tracking cookies or third-party analytics that collect personal information.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">8. Children's Privacy</h2>
-              <p className="mb-3">
-                Our service is not intended for users under the age of 13. We do not knowingly collect 
-                personal information from children under 13.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">9. Changes to This Policy</h2>
-              <p className="mb-3">
-                We may update this privacy policy from time to time. We will notify you of any changes 
-                by posting the new policy on this page and updating the "Last Updated" date.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-xl md:text-2xl font-bold text-green-100 mb-3">10. Contact Us</h2>
-              <p className="mb-3">
-                If you have any questions about this privacy policy or our data practices, please contact us 
-                through the contact information provided on our website.
-              </p>
-            </section>
-          </div>
+          </article>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
+

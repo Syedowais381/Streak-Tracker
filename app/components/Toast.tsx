@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 
+import { CheckCircle2, Info, TriangleAlert, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 interface ToastProps {
@@ -22,39 +23,42 @@ export default function Toast({ message, type, isVisible, onClose, duration = 50
 
   if (!isVisible) return null;
 
-  const icons = {
-    success: '✅',
-    error: '❌',
-    info: 'ℹ️',
-  };
+  const styleMap = {
+    success: {
+      Icon: CheckCircle2,
+      ring: 'border-emerald-400/45',
+      icon: 'text-emerald-300',
+    },
+    error: {
+      Icon: TriangleAlert,
+      ring: 'border-rose-400/45',
+      icon: 'text-rose-300',
+    },
+    info: {
+      Icon: Info,
+      ring: 'border-blue-400/45',
+      icon: 'text-blue-300',
+    },
+  } as const;
 
-  const bgColors = {
-    success: 'bg-green-600/95',
-    error: 'bg-red-600/95',
-    info: 'bg-blue-600/95',
-  };
-
-  const borderColors = {
-    success: 'border-green-400/40',
-    error: 'border-red-400/40',
-    info: 'border-blue-400/40',
-  };
+  const { Icon, ring, icon } = styleMap[type];
 
   return (
-    <div className="fixed top-4 right-4 z-[100] animate-slide-up">
-      <div className={`glass-card ${bgColors[type]} ${borderColors[type]} p-4 rounded-xl shadow-2xl max-w-md min-w-[300px]`}>
-        <div className="flex items-center gap-3">
-          <span className="text-2xl flex-shrink-0">{icons[type]}</span>
-          <p className="text-white font-medium flex-1 text-sm md:text-base">{message}</p>
+    <div className="fixed right-4 top-4 z-[100] fade-in">
+      <div className={`toast ${ring} min-w-[280px] max-w-md p-4`} role="status" aria-live="polite">
+        <div className="flex items-start gap-3">
+          <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${icon}`} />
+          <p className="text-body flex-1 leading-snug text-slate-100">{message}</p>
           <button
             onClick={onClose}
-            className="text-white/80 hover:text-white text-xl font-bold transition-colors flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/20"
+            className="btn btn-ghost h-7 w-7 p-0"
             aria-label="Close notification"
           >
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>
     </div>
   );
 }
+
