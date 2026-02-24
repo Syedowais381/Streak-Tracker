@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+﻿import type { Metadata } from 'next';
+import { Manrope } from 'next/font/google';
+import './globals.css';
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+const manrope = Manrope({
+  variable: '--font-manrope',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "Streak Tracker",
-  description: "Track your streaks and stay motivated",
+  title: 'Streak Tracker',
+  description: 'A calm streak tracker for consistent daily practice.',
 };
 
 export default function RootLayout({
@@ -19,11 +19,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} antialiased font-sans`}
-      >
-        {children}
-      </body>
+      <body className={`${manrope.variable} antialiased font-sans`}>{children}</body>
     </html>
   );
 }
+
